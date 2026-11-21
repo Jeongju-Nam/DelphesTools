@@ -8,12 +8,12 @@ macro = sys.argv[1]
 inFile = sys.argv[2]
 outFile = sys.argv[3]
 
-from ROOT import *
+import ROOT
 delphesPath = "Delphes"
-gSystem.AddIncludePath('-I"%s"' % delphesPath)
-gSystem.AddDynamicPath(delphesPath)
-gSystem.AddLinkedLibs('-L"%s"' % delphesPath)
-gSystem.Load("libDelphes")
+ROOT.gSystem.AddIncludePath('-I"%s"' % delphesPath)
+ROOT.gSystem.AddDynamicPath(delphesPath)
+ROOT.gSystem.AddLinkedLibs('-L"%s"' % delphesPath)
+ROOT.gSystem.Load("libDelphes")
 
-gROOT.ProcessLine(".L %s++" % macro)
-gROOT.ProcessLine('%s("%s", "%s");' % (macro.rsplit('.')[0], inFile, outFile))
+ROOT.gROOT.ProcessLine(".L %s++" % macro)
+ROOT.gROOT.ProcessLine('%s("%s", "%s");' % (macro.rsplit('.')[0], inFile, outFile))
