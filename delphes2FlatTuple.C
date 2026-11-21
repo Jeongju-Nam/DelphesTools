@@ -192,13 +192,13 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
     b_event = event->Number;
     b_weight = event->Weight;
 
-    // Build gen particle collection, for the ttbar decays
+    // Build gen particle collection, for the top, Z and H decays
     std::vector<std::vector<int> > GenParton_topDaus;
     b_nGenParton = 0;
     for ( int i=0; i<branchGen->GetEntries(); ++i ) {
       const GenParticle* p = (const GenParticle*)branchGen->At(i);
       const int pid = p->PID, absId = abs(p->PID);
-      if ( absId != 6 ) continue; // top only.
+      if ( absId != 6 and absId != 23 and absId != 25 ) continue; // top, Z and H only.
       if ( p->D1 == -1 or p->D2 == -1 ) continue; // should have valid daughters
 
       bool isDupl = false;
@@ -211,7 +211,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
       GenParton_topDaus.emplace_back();
       for ( int j=p->D1; j<=p->D2; ++j ) GenParton_topDaus.back().push_back(j);
 
-      // Fill top quarks
+      // Fill top quarks, Z and H bosons
       b_GenParton_pt[b_nGenParton] = p->PT;
       b_GenParton_eta[b_nGenParton] = p->Eta;
       b_GenParton_phi[b_nGenParton] = p->Phi;
