@@ -9,7 +9,9 @@ R__LOAD_LIBRARY(libDelphes)
 #include "TClonesArray.h"
 #include "TSystem.h"
 #include <iostream>
-
+#include <map>
+#include <set>
+#include <algorithm>
 //------------------------------------------------------------------------------
 // Global options to switch on/off output branches
 const bool doSubJet = false;
