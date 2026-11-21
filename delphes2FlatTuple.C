@@ -405,7 +405,6 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
           }
         }
         else {
-          std::cout << obj->IsA()->GetName() << endl;
           continue;
         }
 
