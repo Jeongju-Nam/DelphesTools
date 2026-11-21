@@ -69,6 +69,11 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
   int b_Electron_q[Electron_N];
   float b_Electron_relIso[Electron_N];
 
+  const unsigned int Photon_N = 100;
+  unsigned int b_nPhoton;
+  float b_Photon_pt[Photon_N], b_Photon_eta[Photon_N], b_Photon_phi[Photon_N];
+  float b_Photon_relIso[Photon_N];
+
   const unsigned int Jet_N = 100;
   unsigned int b_nJet;
   float b_Jet_pt[Jet_N], b_Jet_eta[Jet_N], b_Jet_phi[Jet_N], b_Jet_m[Jet_N];
@@ -115,6 +120,12 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
   tree->Branch("Electron_m", b_Electron_m, "Electron_m[nElectron]/F");
   tree->Branch("Electron_q", b_Electron_q, "Electron_q[nElectron]/I");
   tree->Branch("Electron_relIso", b_Electron_relIso, "Electron_relIso[nElectron]/F");
+
+  tree->Branch("nPhoton", &b_nPhoton, "nPhoton/i");
+  tree->Branch("Photon_pt", b_Photon_pt, "Photon_pt[nPhoton]/F");
+  tree->Branch("Photon_eta", b_Photon_eta, "Photon_eta[nPhoton]/F");
+  tree->Branch("Photon_phi", b_Photon_phi, "Photon_phi[nPhoton]/F");
+  tree->Branch("Photon_relIso", b_Photon_relIso, "Photon_relIso[nPhoton]/F");
 
   tree->Branch("nJet", &b_nJet, "nJet/i");
   tree->Branch("Jet_pt", b_Jet_pt, "Jet_pt[nJet]/F");
@@ -167,6 +178,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
   TClonesArray *branchMET = treeReader->UseBranch("MissingET");
   TClonesArray *branchMuon = treeReader->UseBranch("Muon");
   TClonesArray *branchElectron = treeReader->UseBranch("Electron");
+  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
   TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
 
@@ -342,6 +354,20 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
 
       ++b_nElectron;
       if ( b_nElectron >= Electron_N ) break;
+    }
+
+    b_nPhoton = 0;
+    for ( int i=0; i<branchPhoton->GetEntries(); ++i ) {
+      const Photon* photon = (const Photon*) branchPhoton->At(i);
+
+      b_Photon_pt[b_nPhoton] = photon->PT;
+      b_Photon_eta[b_nPhoton] = photon->Eta;
+      b_Photon_phi[b_nPhoton] = photon->Phi;
+
+      b_Photon_relIso[b_nPhoton] = photon->IsolationVar;
+
+      ++b_nPhoton;
+      if ( b_nPhoton >= Photon_N ) break;
     }
 
     b_nJet = b_nSubJet = 0;
