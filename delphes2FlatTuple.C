@@ -32,17 +32,28 @@ int getLast(TClonesArray* branch, const int iGen)
 
 void findPartonAncestors(const GenParticle* p, const TClonesArray* branchGen,
                          const std::map<const GenParticle*, int>& dauPtrToIdx,
-                         std::set<const GenParticle*>& matches)
+                         std::set<const GenParticle*>& matches,
+                         std::set<const GenParticle*>& visited)
 {
   if ( p == nullptr or p->M1 == -1 ) return;
 
   for ( int i=p->M1, n=std::max(p->M1, p->M2); i<=n; ++i ) {
     const GenParticle* mo = (const GenParticle*)branchGen->At(i);
+    if ( !visited.insert(mo).second ) continue; // already searched from this ancestor
+
     auto match = dauPtrToIdx.find(mo);
 
     if ( match != dauPtrToIdx.end() ) matches.insert(match->first);
-    else findPartonAncestors(mo, branchGen, dauPtrToIdx, matches);
+    else findPartonAncestors(mo, branchGen, dauPtrToIdx, matches, visited);
   }
+}
+
+void findPartonAncestors(const GenParticle* p, const TClonesArray* branchGen,
+                         const std::map<const GenParticle*, int>& dauPtrToIdx,
+                         std::set<const GenParticle*>& matches)
+{
+  std::set<const GenParticle*> visited;
+  findPartonAncestors(p, branchGen, dauPtrToIdx, matches, visited);
 }
 
 void delphes2FlatTuple(const std::string finName, const std::string foutName)
