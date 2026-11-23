@@ -464,7 +464,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
         const int idx0 = b_Jet_partonIdx[b_nJet];
         if ( idx0 == -1 ) {
           TLorentzVector lvec0;
-          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx0], b_GenParton_eta[idx0], b_GenParton_phi[idx0], b_GenParton_m[idx0]);
+          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx1], b_GenParton_eta[idx1], b_GenParton_phi[idx1], b_GenParton_m[idx1]);
           dR0 = jetLVec.DeltaR(lvec0);
           b_Jet_partonIdx[b_nJet] = idx1;
           continue;
@@ -526,7 +526,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
         const int idx0 = b_GenJet_partonIdx[b_nGenJet];
         if ( idx0 == -1 ) {
           TLorentzVector lvec0;
-          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx0], b_GenParton_eta[idx0], b_GenParton_phi[idx0], b_GenParton_m[idx0]);
+          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx1], b_GenParton_eta[idx1], b_GenParton_phi[idx1], b_GenParton_m[idx1]);
           dR0 = genJetLVec.DeltaR(lvec0);
           b_GenJet_partonIdx[b_nGenJet] = idx1;
           continue;
@@ -545,7 +545,6 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
                       << endl;
           }
         }
-        b_GenJet_partonIdx[b_nGenJet] = idx1;
       }
 
       ++b_nGenJet;
