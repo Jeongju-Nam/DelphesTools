@@ -9,7 +9,9 @@ R__LOAD_LIBRARY(libDelphes)
 #include "TClonesArray.h"
 #include "TSystem.h"
 #include <iostream>
-
+#include <map>
+#include <set>
+#include <algorithm>
 //------------------------------------------------------------------------------
 // Global options to switch on/off output branches
 const bool doSubJet = false;
@@ -30,17 +32,28 @@ int getLast(TClonesArray* branch, const int iGen)
 
 void findPartonAncestors(const GenParticle* p, const TClonesArray* branchGen,
                          const std::map<const GenParticle*, int>& dauPtrToIdx,
-                         std::set<const GenParticle*>& matches)
+                         std::set<const GenParticle*>& matches,
+                         std::set<const GenParticle*>& visited)
 {
   if ( p == nullptr or p->M1 == -1 ) return;
 
   for ( int i=p->M1, n=std::max(p->M1, p->M2); i<=n; ++i ) {
     const GenParticle* mo = (const GenParticle*)branchGen->At(i);
+    if ( !visited.insert(mo).second ) continue; // already searched from this ancestor
+
     auto match = dauPtrToIdx.find(mo);
 
     if ( match != dauPtrToIdx.end() ) matches.insert(match->first);
-    else findPartonAncestors(mo, branchGen, dauPtrToIdx, matches);
+    else findPartonAncestors(mo, branchGen, dauPtrToIdx, matches, visited);
   }
+}
+
+void findPartonAncestors(const GenParticle* p, const TClonesArray* branchGen,
+                         const std::map<const GenParticle*, int>& dauPtrToIdx,
+                         std::set<const GenParticle*>& matches)
+{
+  std::set<const GenParticle*> visited;
+  findPartonAncestors(p, branchGen, dauPtrToIdx, matches, visited);
 }
 
 void delphes2FlatTuple(const std::string finName, const std::string foutName)
@@ -66,6 +79,11 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
   float b_Electron_pt[Electron_N], b_Electron_eta[Electron_N], b_Electron_phi[Electron_N], b_Electron_m[Electron_N];
   int b_Electron_q[Electron_N];
   float b_Electron_relIso[Electron_N];
+
+  const unsigned int Photon_N = 100;
+  unsigned int b_nPhoton;
+  float b_Photon_pt[Photon_N], b_Photon_eta[Photon_N], b_Photon_phi[Photon_N];
+  float b_Photon_relIso[Photon_N];
 
   const unsigned int Jet_N = 100;
   unsigned int b_nJet;
@@ -113,6 +131,12 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
   tree->Branch("Electron_m", b_Electron_m, "Electron_m[nElectron]/F");
   tree->Branch("Electron_q", b_Electron_q, "Electron_q[nElectron]/I");
   tree->Branch("Electron_relIso", b_Electron_relIso, "Electron_relIso[nElectron]/F");
+
+  tree->Branch("nPhoton", &b_nPhoton, "nPhoton/i");
+  tree->Branch("Photon_pt", b_Photon_pt, "Photon_pt[nPhoton]/F");
+  tree->Branch("Photon_eta", b_Photon_eta, "Photon_eta[nPhoton]/F");
+  tree->Branch("Photon_phi", b_Photon_phi, "Photon_phi[nPhoton]/F");
+  tree->Branch("Photon_relIso", b_Photon_relIso, "Photon_relIso[nPhoton]/F");
 
   tree->Branch("nJet", &b_nJet, "nJet/i");
   tree->Branch("Jet_pt", b_Jet_pt, "Jet_pt[nJet]/F");
@@ -165,6 +189,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
   TClonesArray *branchMET = treeReader->UseBranch("MissingET");
   TClonesArray *branchMuon = treeReader->UseBranch("Muon");
   TClonesArray *branchElectron = treeReader->UseBranch("Electron");
+  TClonesArray *branchPhoton = treeReader->UseBranch("Photon");
   TClonesArray *branchJet = treeReader->UseBranch("Jet");
   TClonesArray *branchGenJet = treeReader->UseBranch("GenJet");
 
@@ -178,13 +203,13 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
     b_event = event->Number;
     b_weight = event->Weight;
 
-    // Build gen particle collection, for the ttbar decays
+    // Build gen particle collection, for the top, Z and H decays
     std::vector<std::vector<int> > GenParton_topDaus;
     b_nGenParton = 0;
     for ( int i=0; i<branchGen->GetEntries(); ++i ) {
       const GenParticle* p = (const GenParticle*)branchGen->At(i);
       const int pid = p->PID, absId = abs(p->PID);
-      if ( absId != 6 ) continue; // top only.
+      if ( absId != 6 and absId != 23 and absId != 25 ) continue; // top, Z and H only.
       if ( p->D1 == -1 or p->D2 == -1 ) continue; // should have valid daughters
 
       bool isDupl = false;
@@ -197,7 +222,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
       GenParton_topDaus.emplace_back();
       for ( int j=p->D1; j<=p->D2; ++j ) GenParton_topDaus.back().push_back(j);
 
-      // Fill top quarks
+      // Fill top quarks, Z and H bosons
       b_GenParton_pt[b_nGenParton] = p->PT;
       b_GenParton_eta[b_nGenParton] = p->Eta;
       b_GenParton_phi[b_nGenParton] = p->Phi;
@@ -342,6 +367,20 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
       if ( b_nElectron >= Electron_N ) break;
     }
 
+    b_nPhoton = 0;
+    for ( int i=0; i<branchPhoton->GetEntries(); ++i ) {
+      const Photon* photon = (const Photon*) branchPhoton->At(i);
+
+      b_Photon_pt[b_nPhoton] = photon->PT;
+      b_Photon_eta[b_nPhoton] = photon->Eta;
+      b_Photon_phi[b_nPhoton] = photon->Phi;
+
+      b_Photon_relIso[b_nPhoton] = photon->IsolationVar;
+
+      ++b_nPhoton;
+      if ( b_nPhoton >= Photon_N ) break;
+    }
+
     b_nJet = b_nSubJet = 0;
     for ( int i=0; i<branchJet->GetEntries(); ++i ) {
       const Jet* jet = (const Jet*) branchJet->At(i);
@@ -403,7 +442,6 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
           }
         }
         else {
-          std::cout << obj->IsA()->GetName() << endl;
           continue;
         }
 
@@ -426,7 +464,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
         const int idx0 = b_Jet_partonIdx[b_nJet];
         if ( idx0 == -1 ) {
           TLorentzVector lvec0;
-          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx0], b_GenParton_eta[idx0], b_GenParton_phi[idx0], b_GenParton_m[idx0]);
+          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx1], b_GenParton_eta[idx1], b_GenParton_phi[idx1], b_GenParton_m[idx1]);
           dR0 = jetLVec.DeltaR(lvec0);
           b_Jet_partonIdx[b_nJet] = idx1;
           continue;
@@ -488,7 +526,7 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
         const int idx0 = b_GenJet_partonIdx[b_nGenJet];
         if ( idx0 == -1 ) {
           TLorentzVector lvec0;
-          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx0], b_GenParton_eta[idx0], b_GenParton_phi[idx0], b_GenParton_m[idx0]);
+          lvec0.SetPtEtaPhiM(b_GenParton_pt[idx1], b_GenParton_eta[idx1], b_GenParton_phi[idx1], b_GenParton_m[idx1]);
           dR0 = genJetLVec.DeltaR(lvec0);
           b_GenJet_partonIdx[b_nGenJet] = idx1;
           continue;
@@ -507,7 +545,6 @@ void delphes2FlatTuple(const std::string finName, const std::string foutName)
                       << endl;
           }
         }
-        b_GenJet_partonIdx[b_nGenJet] = idx1;
       }
 
       ++b_nGenJet;
